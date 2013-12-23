@@ -18,5 +18,9 @@
  "script": "test/echo.sh"},
 {"route": "/eight/<val>",
  "type": "run_script",
- "script": "xxxxxxx"}
+ "script": "xxxxxxx"},
+{"route": "/slow/<val>",
+ "output": true,
+ "type": "run_script",
+ "script": "test/slow.sh"}
 ]

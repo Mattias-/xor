@@ -60,12 +60,11 @@ class RunScriptWebTest(unittest.TestCase):
         # exit status 127 = command not found
         self.assertEqual('127', rv.data)
 
-    def test_negative_script_output(self):
+    def test_bad_script_output(self):
         self.x.add_rules([cfg[4]])
         client = self.x.app.test_client()
-        # exit status 127 = command not found
-        with self.assertRaisesRegexp(CalledProcessError, "exit status 127"):
-            rv = client.get('/t5/something')
+        rv = client.get('/t5/something')
+        self.assertIn("No such file or directory", rv.data)
 
     def test_multiple_rules(self):
         self.x.add_rules(cfg)
@@ -82,8 +81,8 @@ class RunScriptWebTest(unittest.TestCase):
         rv4 = client.get('/t4/something')
         # exit status 127 = command not found
         self.assertEqual('127', rv4.data)
-        with self.assertRaisesRegexp(CalledProcessError, "exit status 127"):
-            rv5 = client.get('/t5/something')
+        rv5 = client.get('/t5/something')
+        self.assertIn("No such file or directory", rv5.data)
 
 if __name__ == '__main__':
     unittest.main()
