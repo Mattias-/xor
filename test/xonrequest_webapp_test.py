@@ -6,25 +6,26 @@ from subprocess import CalledProcessError
 sys.path.insert(0, os.path.abspath(".."))
 from xonrequest import Xor
 
-cfg = [{'route':'/t1/<val1>',
-        'output':True,
-        'type':'run_script',
-        'script':'echo.sh'},
-       {'route':'/t2/<val1>/<val2>',
-        'output':True,
-        'type':'run_script',
-        'script':'echo.sh'},
-       {'route':'/t3/<val1>',
-        'type':'run_script',
-        'script':'echo.sh'},
-       {'route':'/t4/<val1>',
-        'type':'run_script',
-        'script':'XXX'},
-       {'route':'/t5/<val1>',
-        'output':True,
-        'type':'run_script',
-        'script':'XXX'}
+cfg = [{'route': '/t1/<val1>',
+        'output': True,
+        'type': 'run_script',
+        'script': 'echo.sh'},
+       {'route': '/t2/<val1>/<val2>',
+        'output': True,
+        'type': 'run_script',
+        'script': 'echo.sh'},
+       {'route': '/t3/<val1>',
+        'type': 'run_script',
+        'script': 'echo.sh'},
+       {'route': '/t4/<val1>',
+        'type': 'run_script',
+        'script': 'xxxxxx'},
+       {'route': '/t5/<val1>',
+        'output': True,
+        'type': 'run_script',
+        'script': 'xxxxxx'}
        ]
+
 
 class RunScriptWebTest(unittest.TestCase):
     def setUp(self):
