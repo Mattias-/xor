@@ -21,30 +21,46 @@ def read_generator(fd, b):
 def order_args_as_route(route, kwargs):
     def is_var(s):
         return s.startswith('<') and s.endswith('>')
-    def get_key_from_var(s):
-        if ':' in s:
-            s2 = s.split(':')[-1]
+    def get_value_from_var(s):
+        s2 = s[1:-1]
+        res = ''
+        if ':' in s2:
+            split = s2.split(':')
+            if len(split) == 2:
+                if split[0] in ['int', 'float']:
+                    res = str(kwargs[split[1]])
+                else:
+                    res = kwargs[split[1]]
+            else:
+                res = ''
         else:
-            s2 = s[1:]
-        return s2[:-1]
+            res = kwargs[s2]
+        return res
     vs = filter(is_var, route.split('/'))
-    keys = map(get_key_from_var, vs)
-    return [str(kwargs[k]) for k in keys]
+    return map(get_value_from_var, vs)
 
+def order_args(order, args):
+    arg_list = []
+    for o in order + ['query', 'path', 'post']:
+        if o in args:
+            arg_list.extend(args[o])
+            del args[o]
+    return arg_list
 
 # Function factory, hack because of late binding.
 def make_f(r):
     def f(**kwargs):
+        args = {}
         #TODO Do some decoding (and test with encoded data)
-        args = order_args_as_route(r['route'], kwargs)
+        args['path'] = order_args_as_route(r['route'], kwargs)
         if len(request.query_string) > 0:
-            query_args = request.query_string.split('&')
-            args.extend(query_args)
+            args['query'] = request.query_string.split('&')
         if request.method == 'POST':
             content_fd = request.environ['wsgi.input']
-            post_args = content_fd.read(request.content_length).split('&')
-            args.extend(post_args)
-        cmd = ['bash', r['script']] + args
+            args['post'] = content_fd.read(request.content_length).split('&')
+        arg_list = order_args(r.get('order', ['query', 'path', 'post']), args)
+        print arg_list
+        cmd = ['bash', r['script']] + arg_list
         if 'user' in r:
             running_user = subp.check_output(['whoami']).strip()
             if r['user'] != running_user and running_user == 'root':

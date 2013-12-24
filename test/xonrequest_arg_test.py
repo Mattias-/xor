@@ -1,8 +1,10 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import unittest
 import os
 import sys
 import subprocess
+import urllib
 sys.path.insert(0, os.path.abspath(".."))
 from xonrequest import Xor
 
@@ -38,7 +40,7 @@ class VarsTest(unittest.TestCase):
         client = self.x.app.test_client()
         a = '"\\\''
         b = ';_;#--'
-        c = '"abc;def;ghi"'
+        c = '"abc;def;åäö"'
         d = '| %less'
         test_string = "%s/%s/%s/%s" % (a, b, c, d)
         result_string = "%s %s %s %s" % (a, b, c, d)
@@ -60,11 +62,12 @@ class VarsTest(unittest.TestCase):
     def test_converters(self):
         self.x.add_rules([rule2])
         client = self.x.app.test_client()
-        a = 'dev/null'
-        b = 'string'
-        c = 'somethingelse'
+        a = '~/files'
+        b = 'asdas'
+        c= '/dev/null/'
+        c_quoted = urllib.quote(c, '')
         d = '553'
-        test_string = "%s/%s/%s/%s" % (a, b, c, d)
+        test_string = "%s/%s/%s/%s" % (a, b, c_quoted, d)
         result_string = "%s %s %s %s" % (a, b, c, d)
         rv = client.get('/t2/%s' % test_string)
         self.assertEqual(result_string, rv.data.strip())
@@ -96,7 +99,23 @@ class VarsTest(unittest.TestCase):
         path = '/'.join(path_args)
         query_string = '&'.join(query_args)
         data_string = '&'.join(post_args)
-        result_string = ' '.join(path_args + query_args + post_args)
+        result_string = ' '.join(query_args + path_args + post_args)
+        rv = client.post('/t1/%s?%s' % (path, query_string), data=data_string)
+        self.assertEqual(result_string, rv.data.strip())
+
+    def test_given_order(self):
+        rule = simple_rule.copy()
+        order = ['post', 'query', 'path']
+        rule.update({'order': order})
+        self.x.add_rules([rule])
+        client = self.x.app.test_client()
+        path_args = ['abc', '123', 'def', '456']
+        query_args = ['a=789', 'ghi']
+        post_args = ['876','c=jkl','b=543']
+        path = '/'.join(path_args)
+        query_string = '&'.join(query_args)
+        data_string = '&'.join(post_args)
+        result_string = ' '.join(post_args + query_args + path_args)
         rv = client.post('/t1/%s?%s' % (path, query_string), data=data_string)
         self.assertEqual(result_string, rv.data.strip())
 
