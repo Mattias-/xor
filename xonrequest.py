@@ -3,7 +3,7 @@
 import subprocess as subp
 import json
 
-from flask import Flask, Response, stream_with_context
+from flask import Flask, request, Response, stream_with_context
 
 
 def main(argv):
@@ -22,16 +22,28 @@ def order_args_as_route(route, kwargs):
     def is_var(s):
         return s.startswith('<') and s.endswith('>')
     def get_key_from_var(s):
-        return s.split(':')[-1][:-1]
+        if ':' in s:
+            s2 = s.split(':')[-1]
+        else:
+            s2 = s[1:]
+        return s2[:-1]
     vs = filter(is_var, route.split('/'))
     keys = map(get_key_from_var, vs)
-    return [kwargs[k] for k in keys]
+    return [str(kwargs[k]) for k in keys]
 
 
 # Function factory, hack because of late binding.
 def make_f(r):
     def f(**kwargs):
+        #TODO Do some decoding (and test with encoded data)
         args = order_args_as_route(r['route'], kwargs)
+        if len(request.query_string) > 0:
+            query_args = request.query_string.split('&')
+            args.extend(query_args)
+        if request.method == 'POST':
+            content_fd = request.environ['wsgi.input']
+            post_args = content_fd.read(request.content_length).split('&')
+            args.extend(post_args)
         cmd = ['bash', r['script']] + args
         if 'user' in r:
             running_user = subp.check_output(['whoami']).strip()
