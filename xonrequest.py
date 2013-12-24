@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-import subprocess
+import subprocess as subp
 import json
 
-import flask
+from flask import Flask, Response, stream_with_context
 
 
 def main(argv):
@@ -13,36 +13,50 @@ def main(argv):
     x.app.run(host='0.0.0.0', debug=True)
     #x.app.run(host='0.0.0.0', debug=False)
 
+
+def read_generator(fd, b):
+    return iter(lambda: fd.read(b), '')
+
+
+def order_args_as_route(route, kwargs):
+    def is_var(s):
+        return s.startswith('<') and s.endswith('>')
+    def get_key_from_var(s):
+        return s.split(':')[-1][:-1]
+    vs = filter(is_var, route.split('/'))
+    keys = map(get_key_from_var, vs)
+    return [kwargs[k] for k in keys]
+
+
+# Function factory, hack because of late binding.
 def make_f(r):
-    def f(**x):
-        args = x.values()
+    def f(**kwargs):
+        args = order_args_as_route(r['route'], kwargs)
         cmd = ['bash', r['script']] + args
         if 'user' in r:
-            running_user = subprocess.check_output(['whoami']).strip()
+            running_user = subp.check_output(['whoami']).strip()
             if r['user'] != running_user and running_user == 'root':
                 cmd = ['sudo', '-u', r['user']] + cmd
             elif r['user'] != running_user:
                 raise Exception('Permission denied')
-
         if r.get('output'):
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT, bufsize=2)
-            if p.returncode:
-                print p.returncode
-            return flask.Response(flask.stream_with_context(iter(lambda: p.stdout.read(1),'')))
+            p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
+                           bufsize=2)
+            return Response(stream_with_context(read_generator(p.stdout, 1)))
         else:
-            return str(subprocess.call(cmd))
+            return str(subp.call(cmd))
     return f
+
 
 class Xor(object):
     def __init__(self):
-        self.app = flask.Flask(__name__)
+        self.app = Flask(__name__)
 
     def add_rules(self, cfg):
         for rule in cfg:
             if 'route' not in rule:
                 continue
-            if rule.get('type') == 'run_script' and 'script' in rule:
+            if 'script' in rule:
                 endpoint = 'f%s' % str(hash(rule['route']))
                 self.app.add_url_rule(rule['route'], endpoint, make_f(rule),
                                       methods=rule.get('methods'),

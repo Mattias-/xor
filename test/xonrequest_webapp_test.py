@@ -8,21 +8,16 @@ from xonrequest import Xor
 
 cfg = [{'route': '/t1/<val1>',
         'output': True,
-        'type': 'run_script',
         'script': 'echo.sh'},
        {'route': '/t2/<val1>/<val2>',
         'output': True,
-        'type': 'run_script',
         'script': 'echo.sh'},
        {'route': '/t3/<val1>',
-        'type': 'run_script',
         'script': 'echo.sh'},
        {'route': '/t4/<val1>',
-        'type': 'run_script',
         'script': 'xxxxxx'},
        {'route': '/t5/<val1>',
         'output': True,
-        'type': 'run_script',
         'script': 'xxxxxx'}
        ]
 
