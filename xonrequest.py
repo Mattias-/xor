@@ -1,17 +1,19 @@
 #!/usr/bin/env python
 
 import subprocess as subp
+from urllib2 import unquote
 import json
 
 from flask import Flask, request, Response, stream_with_context
 
 
+DEBUG=True
+
 def main(argv):
     config_rules = json.load(open(argv[1]))
     x = Xor()
     x.add_rules(config_rules)
-    x.app.run(host='0.0.0.0', debug=True)
-    #x.app.run(host='0.0.0.0', debug=False)
+    x.app.run(host='0.0.0.0', debug=DEBUG)
 
 
 def read_generator(fd, b):
@@ -54,12 +56,14 @@ def make_f(r):
         #TODO Do some decoding (and test with encoded data)
         args['path'] = order_args_as_route(r['route'], kwargs)
         if len(request.query_string) > 0:
-            args['query'] = request.query_string.split('&')
+            query_string = unquote(request.query_string)
+            args['query'] = query_string.split('&')
         if request.method == 'POST':
             content_fd = request.environ['wsgi.input']
-            args['post'] = content_fd.read(request.content_length).split('&')
+            post_data = unquote(content_fd.read(request.content_length))
+            args['post'] = post_data.split('&')
         arg_list = order_args(r.get('order', ['query', 'path', 'post']), args)
-        print arg_list
+        if DEBUG: print arg_list
         cmd = ['bash', r['script']] + arg_list
         if 'user' in r:
             running_user = subp.check_output(['whoami']).strip()

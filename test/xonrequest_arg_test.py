@@ -4,7 +4,7 @@ import unittest
 import os
 import sys
 import subprocess
-import urllib
+from urllib2 import quote
 sys.path.insert(0, os.path.abspath(".."))
 from xonrequest import Xor
 
@@ -59,13 +59,36 @@ class VarsTest(unittest.TestCase):
         rv = client.get('/t1/%s' % test_string)
         self.assertEqual(result_string, rv.data.strip())
 
+    def test_urlencoded_args(self):
+        def quote_keyval(s):
+            (before, sep, after) = s.partition('=')
+            return quote(before) + sep + quote(after)
+        self.x.add_rules([simple_rule])
+        client = self.x.app.test_client()
+        path_args = ['abc', '123', '"\\"', '<>']
+        path_args_quoted = map(quote, path_args)
+        query_args = ['~/file', '-d=a%26x=y']
+        query_args_quoted = map(quote, query_args)
+        post_args = ['<str','/dev/true','--val%26e=no%26ne']
+        post_args_quoted = map(quote, post_args)
+        path = '/'.join(path_args_quoted)
+        query_string = '&'.join(query_args_quoted)
+        data_string = '&'.join(post_args_quoted)
+        result_string = ' '.join(query_args + path_args + post_args)
+        rv = client.post('/t1/%s?%s' % (path, query_string), data=data_string)
+        self.assertEqual(result_string, rv.data.strip())
+        rv2 = client.post('/t1/%s?%s' % ('/'.join(path_args),
+                                         '&'.join(query_args)),
+                                        data='&'.join(post_args))
+        self.assertNotEqual(result_string, rv2.data.strip())
+
     def test_converters(self):
         self.x.add_rules([rule2])
         client = self.x.app.test_client()
         a = '~/files'
         b = 'asdas'
         c= '/dev/null/'
-        c_quoted = urllib.quote(c, '')
+        c_quoted = quote(c, '')
         d = '553'
         test_string = "%s/%s/%s/%s" % (a, b, c_quoted, d)
         result_string = "%s %s %s %s" % (a, b, c, d)
