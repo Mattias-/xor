@@ -7,7 +7,8 @@ import json
 from flask import Flask, request, Response, stream_with_context
 
 
-DEBUG=True
+DEBUG = True
+
 
 def main(argv):
     config_rules = json.load(open(argv[1]))
@@ -20,26 +21,51 @@ def read_generator(fd, b):
     return iter(lambda: fd.read(b), '')
 
 
-def order_args_as_route(route, kwargs):
-    def is_var(s):
-        return s.startswith('<') and s.endswith('>')
-    def get_value_from_var(s):
-        s2 = s[1:-1]
-        res = ''
-        if ':' in s2:
-            split = s2.split(':')
-            if len(split) == 2:
-                if split[0] in ['int', 'float']:
-                    res = str(kwargs[split[1]])
-                else:
-                    res = kwargs[split[1]]
+def run_cmd(cmd, user=None, output=False):
+    if user:
+        running_user = subp.check_output(['whoami']).strip()
+        if user != running_user:
+            if running_user == 'root':
+                cmd = ['sudo', '-u', user] + cmd
             else:
-                res = ''
-        else:
-            res = kwargs[s2]
+                raise Exception('Permission denied')
+    if output:
+        p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
+                       bufsize=2)
+        return Response(stream_with_context(read_generator(p.stdout, 1)))
+    else:
+        return str(subp.call(cmd))
+
+
+def get_path_args(kwargs, route):
+    def get_vars(route):
+        res = []
+        vs = route.split('/')
+        for v in vs:
+            if v.startswith('<') and v.endswith('>'):
+                v = v[1:-1]
+                ind = v.find(':')
+                res.append(v[ind+1:])
         return res
-    vs = filter(is_var, route.split('/'))
-    return map(get_value_from_var, vs)
+    return [unicode(kwargs[x]) for x in get_vars(route)]
+
+
+def get_query_args(request):
+    if len(request.query_string) > 0:
+        query_string = unquote(request.query_string)
+        return query_string.split('&')
+    else:
+        return []
+
+
+def get_post_args(request):
+    if request.method == 'POST':
+        content = request.environ['wsgi.input']
+        post_data = unquote(content.read(request.content_length))
+        return post_data.split('&')
+    else:
+        return []
+
 
 def order_args(order, args):
     arg_list = []
@@ -49,35 +75,26 @@ def order_args(order, args):
             del args[o]
     return arg_list
 
-# Function factory, hack because of late binding.
-def make_f(r):
-    def f(**kwargs):
+
+# Function factory, because of late binding.
+def create_view(route=None, output=False, order=None, user=None, script=None,
+                methods=None):
+    if not route:
+        raise Exception
+    if not order:
+        order = ['query', 'path', 'post']
+
+    def view(**kwargs):
         args = {}
-        #TODO Do some decoding (and test with encoded data)
-        args['path'] = order_args_as_route(r['route'], kwargs)
-        if len(request.query_string) > 0:
-            query_string = unquote(request.query_string)
-            args['query'] = query_string.split('&')
-        if request.method == 'POST':
-            content_fd = request.environ['wsgi.input']
-            post_data = unquote(content_fd.read(request.content_length))
-            args['post'] = post_data.split('&')
-        arg_list = order_args(r.get('order', ['query', 'path', 'post']), args)
-        if DEBUG: print arg_list
-        cmd = ['bash', r['script']] + arg_list
-        if 'user' in r:
-            running_user = subp.check_output(['whoami']).strip()
-            if r['user'] != running_user and running_user == 'root':
-                cmd = ['sudo', '-u', r['user']] + cmd
-            elif r['user'] != running_user:
-                raise Exception('Permission denied')
-        if r.get('output'):
-            p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
-                           bufsize=2)
-            return Response(stream_with_context(read_generator(p.stdout, 1)))
-        else:
-            return str(subp.call(cmd))
-    return f
+        args['path'] = get_path_args(kwargs, route)
+        args['query'] = get_query_args(request)
+        args['post'] = get_post_args(request)
+        arg_list = order_args(order, args)
+        if DEBUG:
+            print arg_list
+        cmd = ['bash', script] + arg_list
+        return run_cmd(cmd, user=user, output=output)
+    return view
 
 
 class Xor(object):
@@ -90,7 +107,8 @@ class Xor(object):
                 continue
             if 'script' in rule:
                 endpoint = 'f%s' % str(hash(rule['route']))
-                self.app.add_url_rule(rule['route'], endpoint, make_f(rule),
+                self.app.add_url_rule(rule['route'], endpoint,
+                                      create_view(**rule),
                                       methods=rule.get('methods'),
                                       defaults=rule.get('defaults'))
 
