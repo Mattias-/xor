@@ -1,3 +1,6 @@
+/include/
+/local/
+.*.swp
 *.py[cod]
 
 # C extensions
