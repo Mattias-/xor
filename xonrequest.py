@@ -78,7 +78,7 @@ def order_args(order, args):
 
 # Function factory, because of late binding.
 def create_view(route=None, output=False, order=None, user=None, script=None,
-                methods=None):
+                methods=None, defaults=None):
     if not route:
         raise Exception
     if not order:

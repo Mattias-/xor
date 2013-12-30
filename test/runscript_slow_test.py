@@ -8,7 +8,7 @@ from xonrequest import Xor
 
 simple_rule = {'route': '/t1/<val1>',
         'output': True,
-        'script': 'slow.sh'}
+        'script': 'files/slow.sh'}
 
 class RunscriptSlowTest(unittest.TestCase):
     def setUp(self):

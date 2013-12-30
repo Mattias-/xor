@@ -1,2 +1,2 @@
 
-import xonrequest
+from xonrequest import Xor

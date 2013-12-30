@@ -11,16 +11,16 @@ from xonrequest import Xor
 simple_rule = {'route': '/t1/<val2>/<val4>/<val1>/<val3>',
                'methods': ['GET', 'POST'],
                'output': True,
-               'script': 'echo.sh'}
+               'script': 'files/echo.sh'}
 
 rule2 = {'route': '/t2/<path:val1>/<val2>/<val3>/<int:val4>',
          'output': True,
-         'script': 'echo.sh'}
+         'script': 'files/echo.sh'}
 
 rule3 = {'route': '/t1',
          'methods': ['GET', 'POST'],
          'output': True,
-         'script': 'echo.sh'}
+         'script': 'files/echo.sh'}
 
 class VarsTest(unittest.TestCase):
     def setUp(self):

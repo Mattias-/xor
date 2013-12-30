@@ -8,7 +8,7 @@ from xonrequest import Xor
 
 simple_rule = {'route': '/t1/<val1>',
         'output': True,
-        'script': 'whoami.sh'}
+        'script': 'files/whoami.sh'}
 
 class RunscriptSudoTest(unittest.TestCase):
     def setUp(self):
