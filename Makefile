@@ -1,3 +1,6 @@
-.PHONY: test
+default: test
+
 test:
-	        @(cd test; python run-tests.py)
+		nosetests --exe -w tests/
+coverage:
+		nosetests --exe -w tests/ --with-coverage --cover-package=xonrequest
