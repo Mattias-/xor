@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-import unittest
 import os
-import sys
 import subprocess
-sys.path.insert(0, os.path.abspath(".."))
+import sys
+import unittest
+
 from xonrequest import Xor
 
 simple_rule = {'route': '/t1/<val1>',
@@ -21,6 +21,3 @@ class RunscriptSlowTest(unittest.TestCase):
         test_string = '1 2 3 4 5 6'
         rv = client.get('/t1/%s' % test_string)
         self.assertEqual(test_string, rv.data.strip())
-
-if __name__ == '__main__':
-    unittest.main()

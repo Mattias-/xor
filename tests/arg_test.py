@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import unittest
 import os
-import sys
 import subprocess
+import sys
+import unittest
 from urllib2 import quote
-sys.path.insert(0, os.path.abspath(".."))
+
 from xonrequest import Xor
 
 simple_rule = {'route': '/t1/<val2>/<val4>/<val1>/<val3>',
@@ -141,6 +141,3 @@ class VarsTest(unittest.TestCase):
         result_string = ' '.join(post_args + query_args + path_args)
         rv = client.post('/t1/%s?%s' % (path, query_string), data=data_string)
         self.assertEqual(result_string, rv.data.strip())
-
-if __name__ == '__main__':
-    unittest.main()

@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-import unittest
 import os
 import sys
-from subprocess import CalledProcessError
-sys.path.insert(0, os.path.abspath(".."))
+import unittest
+
 from xonrequest import Xor
 
 cfg = [{'route': '/t1/<val1>',
@@ -78,6 +77,3 @@ class RunScriptWebTest(unittest.TestCase):
         self.assertEqual('127', rv4.data)
         rv5 = client.get('/t5/something')
         self.assertIn("No such file or directory", rv5.data)
-
-if __name__ == '__main__':
-    unittest.main()

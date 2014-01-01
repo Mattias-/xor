@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-import unittest
 import os
 import sys
 import subprocess
+import unittest
 from urllib2 import quote
-sys.path.insert(0, os.path.abspath(".."))
+
 from xonrequest import Xor
 
 simple_rule = {'route': '/t1/<val1>',
@@ -33,7 +33,3 @@ class CmdArgTest(unittest.TestCase):
         rv = client.get('/t2/?' + quote(filename))
         test_string = open(filename).read()
         self.assertEqual(test_string, rv.data)
-
-
-if __name__ == '__main__':
-    unittest.main()

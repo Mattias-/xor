@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-import unittest
 import os
-import sys
 import subprocess
-sys.path.insert(0, os.path.abspath(".."))
+import sys
+import unittest
+
 from xonrequest import Xor
 
 simple_rule = {'route': '/t1/<val1>',
@@ -74,6 +74,3 @@ class RunscriptSudoTest(unittest.TestCase):
                 rv = client.get('/t2/cba')
             with self.assertRaisesRegexp(Exception, 'Permission denied'):
                 rv = client.get('/t3/cba')
-
-if __name__ == '__main__':
-    unittest.main()
