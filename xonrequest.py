@@ -3,18 +3,30 @@
 import subprocess as subp
 from urllib2 import unquote
 import json
+import os
+import signal
 
-from flask import Flask, request, Response, stream_with_context
+from flask import Flask, request, Response, stream_with_context, g
+from werkzeug.serving import WSGIRequestHandler
 
 
 DEBUG = True
+
+
+class XorRequestHandler(WSGIRequestHandler):
+    def connection_dropped(self, error, environ=None):
+        if g.proc:
+            print "Killing process: ", g.proc
+            os.killpg(g.proc.pid, signal.SIGKILL)
+            g.proc.communicate()
 
 
 def main(argv):
     config_rules = json.load(open(argv[1]))
     x = Xor()
     x.add_rules(config_rules)
-    x.app.run(host='0.0.0.0', debug=DEBUG)
+    x.app.run(host='0.0.0.0', debug=DEBUG, extra_files=[argv[1]],
+              request_handler=XorRequestHandler)
 
 
 def read_generator(fd, b):
@@ -31,7 +43,8 @@ def run_cmd(cmd, user=None, output=False):
                 raise Exception('Permission denied')
     if output:
         p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
-                       bufsize=2)
+                       bufsize=2, preexec_fn=os.setsid)
+        g.proc = p
         return Response(stream_with_context(read_generator(p.stdout, 1)))
     else:
         return str(subp.call(cmd))
@@ -78,11 +91,15 @@ def order_args(order, args):
 
 # Function factory, because of late binding.
 def create_view(route=None, output=False, order=None, user=None, script=None,
-                methods=None, defaults=None):
+                command=None, **options):
     if not route:
         raise Exception
     if not order:
         order = ['query', 'path', 'post']
+    if script:
+        cmd = ['bash']
+    else:
+        cmd = ['bash', '-c']
 
     def view(**kwargs):
         args = {}
@@ -92,8 +109,11 @@ def create_view(route=None, output=False, order=None, user=None, script=None,
         arg_list = order_args(order, args)
         if DEBUG:
             print arg_list
-        cmd = ['bash', script] + arg_list
-        return run_cmd(cmd, user=user, output=output)
+        if script:
+            this_cmd = cmd + [script] + arg_list
+        else:
+            this_cmd = cmd + [' '.join([command] + arg_list)]
+        return run_cmd(this_cmd, user=user, output=output)
     return view
 
 
@@ -105,7 +125,7 @@ class Xor(object):
         for rule in cfg:
             if 'route' not in rule:
                 continue
-            if 'script' in rule:
+            if 'script' in rule or 'command' in rule:
                 endpoint = 'f%s' % str(hash(rule['route']))
                 self.app.add_url_rule(rule['route'], endpoint,
                                       create_view(**rule),

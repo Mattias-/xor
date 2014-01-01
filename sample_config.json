@@ -16,5 +16,11 @@
  "script": "xxxxxxx"},
 {"route": "/slow/<val>",
  "output": true,
- "script": "test/slow.sh"}
+ "script": "test/slow.sh"},
+{"route": "/cmd1/<val>",
+ "output": true,
+ "command": "ls"},
+{"route": "/cmd2/<val>",
+ "output": true,
+ "command": "top"}
 ]
