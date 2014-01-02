@@ -1,2 +1,3 @@
+#!/bin/bash
 whoami
 echo $@
