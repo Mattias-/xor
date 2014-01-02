@@ -33,7 +33,7 @@ def read_generator(fd, b):
     return iter(lambda: fd.read(b), '')
 
 
-def run_cmd(cmd, user=None, output=False):
+def run_cmd(cmd, user=None, output=False, script=False):
     if user:
         running_user = subp.check_output(['whoami']).strip()
         if user != running_user:
@@ -42,12 +42,20 @@ def run_cmd(cmd, user=None, output=False):
             else:
                 raise Exception('Permission denied')
     if output:
-        p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
-                       bufsize=2, preexec_fn=os.setsid)
+        if script:
+            p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
+                           bufsize=2, preexec_fn=os.setsid)
+        else:
+            p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
+                           bufsize=2, preexec_fn=os.setsid, shell=True)
         g.proc = p
         return Response(stream_with_context(read_generator(p.stdout, 1)))
     else:
-        return str(subp.call(cmd))
+        try:
+            exit_value = subp.call(cmd)
+        except OSError as e:
+            exit_value = e.errno
+        return str(exit_value)
 
 
 def get_path_args(kwargs, route):
@@ -96,10 +104,6 @@ def create_view(route=None, output=False, order=None, user=None, script=None,
         raise Exception
     if not order:
         order = ['query', 'path', 'post']
-    if script:
-        cmd = ['bash']
-    else:
-        cmd = ['bash', '-c']
 
     def view(**kwargs):
         args = {}
@@ -107,14 +111,24 @@ def create_view(route=None, output=False, order=None, user=None, script=None,
         args['query'] = get_query_args(request)
         args['post'] = get_post_args(request)
         arg_list = order_args(order, args)
-        if DEBUG:
-            print arg_list
         if script:
-            this_cmd = cmd + [script] + arg_list
+            this_cmd = [script] + arg_list
         else:
-            this_cmd = cmd + [' '.join([command] + arg_list)]
-        return run_cmd(this_cmd, user=user, output=output)
+            arg_list = safe_args(arg_list)
+            this_cmd = [' '.join([command] + arg_list)]
+        if DEBUG:
+            print this_cmd
+        return run_cmd(this_cmd, user=user, output=output, script=script)
     return view
+
+def safe_args(li):
+    chars = ';>|&'
+    res = []
+    for arg in li:
+        for c in chars:
+            arg = arg.replace(c, '\\%s' % c)
+        res.append(arg)
+    return res
 
 
 class Xor(object):
