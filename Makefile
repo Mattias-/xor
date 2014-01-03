@@ -4,7 +4,7 @@ test:
 		nosetests $(TEST_OPTIONS) -e slow
 
 coverage:
-		nosetests $(TEST_OPTIONS) --with-coverage --cover-package=xonrequest
+		nosetests $(TEST_OPTIONS) --with-coverage --cover-package=xor
 
 build:
 	        virtualenv xor_env && . xor_env/bin/activate && \
