@@ -105,6 +105,13 @@ class VarsTest(unittest.TestCase):
         rv = client.get('/t1?%s' % test_string)
         self.assertEqual(result_string, rv.data.strip())
 
+    def test_bash_escape_query_arg(self):
+        self.x.add_rules([rule3])
+        client = self.x.app.test_client()
+        test_string = "abc;echo def"
+        rv = client.get('/t1?%s' % test_string)
+        self.assertEqual(test_string, rv.data.strip())
+
     def test_ordered_post_args(self):
         self.x.add_rules([rule3])
         client = self.x.app.test_client()

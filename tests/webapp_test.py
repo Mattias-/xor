@@ -16,9 +16,15 @@ cfg = [{'route': '/t1/<val1>',
         'script': script_path+'echo.sh'},
        {'route': '/t4/<val1>',
         'script': 'xxxxxx'},
+       {'route': '/t4out/<val1>',
+        'output': True,
+        'script': 'xxxxxx'},
        {'route': '/t5/<val1>',
         'output': True,
-        'script': 'xxxxxx'}
+        'script': script_path+'nohashbang.sh'},
+       {'route': '/t6/<val1>',
+        'output': True,
+        'script': script_path+'notexec.sh'}
        ]
 
 
@@ -53,13 +59,26 @@ class RunScriptWebTest(unittest.TestCase):
         client = self.x.app.test_client()
         rv = client.get('/t4/something')
         # exit status 127 = command not found
-        self.assertEqual('127', rv.data)
+        #self.assertEqual('127', rv.data)
+        self.assertEqual('2', rv.data)
 
-    def test_bad_script_output(self):
+    def test_neg_script_output_nofile(self):
         self.x.add_rules([cfg[4]])
         client = self.x.app.test_client()
-        rv = client.get('/t5/something')
-        self.assertIn("No such file or directory", rv.data)
+        with self.assertRaisesRegexp(OSError, 'No such file'):
+            rv = client.get('/t4out/something')
+
+    def test_neg_script_output_nohashbang(self):
+        self.x.add_rules([cfg[5]])
+        client = self.x.app.test_client()
+        with self.assertRaisesRegexp(OSError, 'Exec format error'):
+            rv = client.get('/t5/something')
+
+    def test_neg_script_output_notexec(self):
+        self.x.add_rules([cfg[6]])
+        client = self.x.app.test_client()
+        with self.assertRaisesRegexp(OSError, 'Permission denied'):
+            rv = client.get('/t6/something')
 
     def test_multiple_rules(self):
         self.x.add_rules(cfg)
@@ -75,6 +94,7 @@ class RunScriptWebTest(unittest.TestCase):
         self.assertEqual('0', rv3.data)
         rv4 = client.get('/t4/something')
         # exit status 127 = command not found
-        self.assertEqual('127', rv4.data)
-        rv5 = client.get('/t5/something')
-        self.assertIn("No such file or directory", rv5.data)
+        #self.assertEqual('127', rv4.data)
+        self.assertEqual('2', rv4.data)
+        with self.assertRaisesRegexp(OSError, 'No such file'):
+            rv5 = client.get('/t4out/something')
