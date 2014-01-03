@@ -5,3 +5,7 @@
 
 
 This is xor
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/Mattias-/xor/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
