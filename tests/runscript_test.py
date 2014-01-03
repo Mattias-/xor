@@ -6,9 +6,10 @@ import unittest
 
 from xonrequest import Xor
 
+script_path = 'tests/files/'
 simple_rule = {'route': '/t1/<val1>',
         'output': True,
-        'script': 'files/whoami.sh'}
+        'script': script_path+'whoami.sh'}
 
 class RunscriptSudoTest(unittest.TestCase):
     def setUp(self):

@@ -5,14 +5,15 @@ import unittest
 
 from xonrequest import Xor
 
+script_path = 'tests/files/'
 cfg = [{'route': '/t1/<val1>',
         'output': True,
-        'script': 'files/echo.sh'},
+        'script': script_path+'echo.sh'},
        {'route': '/t2/<val1>/<val2>',
         'output': True,
-        'script': 'files/echo.sh'},
+        'script': script_path+'echo.sh'},
        {'route': '/t3/<val1>',
-        'script': 'files/echo.sh'},
+        'script': script_path+'echo.sh'},
        {'route': '/t4/<val1>',
         'script': 'xxxxxx'},
        {'route': '/t5/<val1>',

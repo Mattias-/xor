@@ -6,9 +6,10 @@ import unittest
 
 from xonrequest import Xor
 
+script_path='tests/files/'
 simple_rule = {'route': '/t1/<val1>',
         'output': True,
-        'script': 'files/slow.sh'}
+        'script': script_path+'slow.sh'}
 
 class RunscriptSlowTest(unittest.TestCase):
     def setUp(self):

@@ -1,7 +1,7 @@
 default: test
 
 test:
-		nosetests $(TEST_OPTIONS) --exe -w tests/
+		nosetests $(TEST_OPTIONS)
 
 coverage:
-		nosetests $(TEST_OPTIONS) --exe -w tests/ --with-coverage --cover-package=xonrequest
+		nosetests $(TEST_OPTIONS) --with-coverage --cover-package=xonrequest

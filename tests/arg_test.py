@@ -8,19 +8,20 @@ from urllib2 import quote
 
 from xonrequest import Xor
 
+script_path='tests/files/'
 simple_rule = {'route': '/t1/<val2>/<val4>/<val1>/<val3>',
                'methods': ['GET', 'POST'],
                'output': True,
-               'script': 'files/echo.sh'}
+               'script': script_path+'echo.sh'}
 
 rule2 = {'route': '/t2/<path:val1>/<val2>/<val3>/<int:val4>',
          'output': True,
-         'script': 'files/echo.sh'}
+         'script': script_path+'echo.sh'}
 
 rule3 = {'route': '/t1',
          'methods': ['GET', 'POST'],
          'output': True,
-         'script': 'files/echo.sh'}
+         'script': script_path+'echo.sh'}
 
 class VarsTest(unittest.TestCase):
     def setUp(self):
