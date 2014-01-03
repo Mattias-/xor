@@ -1,4 +1,6 @@
-x-on-request
-============
 
-Do something when getting a HTTP request
+
+[![Coverage Status](https://coveralls.io/repos/Mattias-/xor/badge.png)](https://coveralls.io/r/Mattias-/xor)
+
+
+This is xor
