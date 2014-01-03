@@ -42,18 +42,18 @@ def run_cmd(cmd, user=None, output=False, script=False):
             else:
                 raise Exception('Permission denied')
     if output:
-        if script:
-            p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
-                           bufsize=2, preexec_fn=os.setsid)
-        else:
-            p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
-                           bufsize=2, preexec_fn=os.setsid, shell=True)
+        p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
+                       bufsize=2, preexec_fn=os.setsid, shell=(not script))
         g.proc = p
         return Response(stream_with_context(read_generator(p.stdout, 1)))
     else:
         try:
-            exit_value = subp.call(cmd)
+            p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.STDOUT,
+                           preexec_fn=os.setsid, shell=(not script))
+            (a, b) = p.communicate()
+            exit_value = p.returncode
         except OSError as e:
+            print e
             exit_value = e.errno
         return str(exit_value)
 
