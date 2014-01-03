@@ -4,7 +4,7 @@ import subprocess
 import sys
 import unittest
 
-from xonrequest import Xor
+from xor import Xor
 
 script_path='tests/files/'
 simple_rule = {'route': '/t1/<val1>',

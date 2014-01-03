@@ -6,7 +6,7 @@ import sys
 import unittest
 from urllib2 import quote
 
-from xonrequest import Xor
+from xor import Xor
 
 script_path='tests/files/'
 simple_rule = {'route': '/t1/<val2>/<val4>/<val1>/<val3>',

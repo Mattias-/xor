@@ -5,7 +5,7 @@ import subprocess
 import unittest
 from urllib2 import quote
 
-from xonrequest import Xor
+from xor import Xor
 
 simple_rule = {'route': '/t1/<val1>',
         'output': True,

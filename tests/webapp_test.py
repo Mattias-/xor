@@ -3,7 +3,7 @@ import os
 import sys
 import unittest
 
-from xonrequest import Xor
+from xor import Xor
 
 script_path = 'tests/files/'
 cfg = [{'route': '/t1/<val1>',
