@@ -1,0 +1,4 @@
+doc-warnings: no
+test-warnings: yes
+strictness: veryhigh
+autodetect: yes
