@@ -24,7 +24,10 @@ cfg = [{'route': '/t1/<val1>',
         'script': script_path+'nohashbang.sh'},
        {'route': '/t6/<val1>',
         'output': True,
-        'script': script_path+'notexec.sh'}
+        'script': script_path+'notexec.sh'},
+       { # MISSING ROUTE
+        'output': True,
+        'script': 'xxxxxx'}
        ]
 
 

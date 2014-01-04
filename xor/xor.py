@@ -46,15 +46,42 @@ class Xor(object):
         self.app = flask.Flask(__name__)
 
     def add_rules(self, cfg):
-        for rule in cfg:
+        for r in cfg:
+            rule = r.copy()
             if 'route' not in rule:
                 continue
             if 'script' in rule or 'command' in rule:
-                endpoint = 'f%s' % str(hash(rule['route']))
-                self.app.add_url_rule(rule['route'], endpoint,
-                                      Xor.__create_view(**rule),
-                                      methods=rule.get('methods'),
-                                      defaults=rule.get('defaults'))
+                route = rule.pop('route')
+                endpoint = 'f%s' % str(hash(route))
+                methods = rule.pop('methods', None)
+                defaults = rule.pop('defaults', None)
+                self.app.add_url_rule(route, endpoint,
+                                      Xor.__create_view(route, **rule),
+                                      methods=methods, defaults=defaults)
+
+    # Function factory, because of late binding.
+    @staticmethod
+    def __create_view(route, output=False, order=None, user=None,
+                      script=None, command=None, **options):
+        if not order:
+            order = ['query', 'path', 'post']
+
+        def view(**kwargs):
+            args = {}
+            args['path'] = Xor.__get_path_args(kwargs, route)
+            args['query'] = Xor.__get_query_args(flask.request)
+            args['post'] = Xor.__get_post_args(flask.request)
+            arg_list = Xor.__order_args(order, args)
+            if script:
+                this_cmd = [script] + arg_list
+            else:
+                arg_list = map(escape_arg, arg_list)
+                this_cmd = [' '.join([command] + arg_list)]
+            if DEBUG:
+                print this_cmd
+            return Xor.__run_cmd(this_cmd, user=user, output=output,
+                                 script=script)
+        return view
 
     @staticmethod
     def __run_cmd(cmd, user=None, output=False, script=False):
@@ -85,44 +112,16 @@ class Xor(object):
                 exit_value = error.errno
             return flask.make_response(str(exit_value))
 
-    # Function factory, because of late binding.
-    @staticmethod
-    def __create_view(route=None, output=False, order=None, user=None,
-                      script=None, command=None, **options):
-        if not route:
-            raise Exception
-        if not order:
-            order = ['query', 'path', 'post']
-
-        def view(**kwargs):
-            args = {}
-            args['path'] = Xor.__get_path_args(kwargs, route)
-            args['query'] = Xor.__get_query_args(flask.request)
-            args['post'] = Xor.__get_post_args(flask.request)
-            arg_list = Xor.__order_args(order, args)
-            if script:
-                this_cmd = [script] + arg_list
-            else:
-                arg_list = map(escape_arg, arg_list)
-                this_cmd = [' '.join([command] + arg_list)]
-            if DEBUG:
-                print this_cmd
-            return Xor.__run_cmd(this_cmd, user=user, output=output,
-                                 script=script)
-        return view
-
     @staticmethod
     def __get_path_args(kwargs, route):
-        def get_vars(route):
-            res = []
-            route_vars = route.split('/')
-            for var in route_vars:
-                if var.startswith('<') and var.endswith('>'):
-                    var = var[1:-1]
-                    index = var.find(':')
-                    res.append(var[index+1:])
-            return res
-        return [unicode(kwargs[x]) for x in get_vars(route)]
+        res = []
+        route_vars = route.split('/')
+        for var in route_vars:
+            if var.startswith('<') and var.endswith('>'):
+                var = var[1:-1]
+                index = var.find(':')
+                res.append(var[index+1:])
+        return [unicode(kwargs[x]) for x in res]
 
     @staticmethod
     def __get_query_args(req):
