@@ -8,6 +8,7 @@ from urllib2 import unquote
 
 import flask
 from werkzeug.serving import WSGIRequestHandler
+from werkzeug.datastructures import OrderedMultiDict
 
 
 DEBUG = True
@@ -71,8 +72,8 @@ class Xor(object):
             post_args = Xor.__get_post_args(flask.request)
             args = {}
             args['path'] = Xor.__get_path_args(kwargs, route)
-            args['query'] = map(Xor.__arg_to_string, query_args)
-            args['post'] = map(Xor.__arg_to_string, post_args)
+            args['query'] = map(Xor.__arg_to_string, query_args.items(multi=True))
+            args['post'] = map(Xor.__arg_to_string, post_args.items(multi=True))
             arg_list = Xor.__order_args(order, args)
             if script:
                 this_cmd = [script] + arg_list
@@ -128,32 +129,36 @@ class Xor(object):
 
     @staticmethod
     def __get_query_args(req):
+        d = OrderedMultiDict()
         if len(req.query_string) > 0:
             arg_list = req.query_string.split('&')
             arg_list = map(unquote, arg_list)
-            tuple_list = map(lambda x: x.split('=', 1), arg_list)
-            return tuple_list
-        else:
-            return []
+            for arg in arg_list:
+                spl = arg.split('=', 1)
+                spl.append(None)
+                d.add(spl[0], spl[1])
+        return d
 
     @staticmethod
     def __get_post_args(req):
+        d = OrderedMultiDict()
         if req.method == 'POST':
             content = req.environ['wsgi.input']
             post_data = content.read(req.content_length)
             arg_list = post_data.split('&')
             arg_list = map(unquote, arg_list)
-            tuple_list = map(lambda x: x.split('=', 1), arg_list)
-            return tuple_list
-        else:
-            return []
+            for arg in arg_list:
+                spl = arg.split('=', 1)
+                spl.append(None)
+                d.add(spl[0], spl[1])
+        return d
 
     @staticmethod
     def __arg_to_string(arg):
-        if len(arg) == 2:
-            return u'%s=%s' % tuple(arg)
-        else:
+        if not arg[1]:
             return arg[0]
+        else:
+            return u'%s=%s' % arg
 
     @staticmethod
     def __order_args(order, args):
