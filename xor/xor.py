@@ -67,10 +67,12 @@ class Xor(object):
             order = ['query', 'path', 'post']
 
         def view(**kwargs):
+            query_args = Xor.__get_query_args(flask.request)
+            post_args = Xor.__get_post_args(flask.request)
             args = {}
             args['path'] = Xor.__get_path_args(kwargs, route)
-            args['query'] = Xor.__get_query_args(flask.request)
-            args['post'] = Xor.__get_post_args(flask.request)
+            args['query'] = map(Xor.__arg_to_string, query_args)
+            args['post'] = map(Xor.__arg_to_string, post_args)
             arg_list = Xor.__order_args(order, args)
             if script:
                 this_cmd = [script] + arg_list
