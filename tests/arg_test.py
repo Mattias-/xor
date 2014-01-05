@@ -23,10 +23,27 @@ rule3 = {'route': '/t1',
          'output': True,
          'script': script_path+'echo.sh'}
 
+rule4 = {'route': '/nested',
+         'methods': ['GET', 'POST'],
+         'output': True,
+         'script': script_path+'echoarg.sh'}
+
 class VarsTest(unittest.TestCase):
     def setUp(self):
         self.x = Xor()
         self.x.app.testing = True
+
+    def test_nested_urls(self):
+        self.x.add_rules([rule4])
+        client = self.x.app.test_client()
+        url1 = 'http://a.se/bb?c=d&e=f'
+        url2 = 'http://b.se/gg?h&i&j=%s' % quote(url1, '')
+        test_string = 'url1=%s&url2=%s' % (quote(url1, ''), quote(url2, ''))
+        rv = client.get('/nested?url1&%s' % test_string)
+        self.assertEqual(url1, rv.data.strip())
+        rv2 = client.get('/nested?url2&%s' % test_string)
+        self.assertEqual(url2, rv2.data.strip())
+
 
     def test_ordered_path_args(self):
         self.x.add_rules([simple_rule])

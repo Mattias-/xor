@@ -35,7 +35,7 @@ def read_generator(file_d, size):
 
 
 def escape_arg(arg):
-    chars = [';', '>', '|', '&']
+    chars = [';', '>', '<', '|', '&']
     for char in chars:
         arg = arg.replace(char, '\\%s' % char)
     return arg
@@ -78,6 +78,7 @@ class Xor(object):
                 arg_list = map(escape_arg, arg_list)
                 this_cmd = [' '.join([command] + arg_list)]
             if DEBUG:
+                print flask.request.method, flask.request.url
                 print this_cmd
             return Xor.__run_cmd(this_cmd, user=user, output=output,
                                  script=script)
@@ -126,8 +127,10 @@ class Xor(object):
     @staticmethod
     def __get_query_args(req):
         if len(req.query_string) > 0:
-            query_string = unquote(req.query_string)
-            return query_string.split('&')
+            arg_list = req.query_string.split('&')
+            arg_list = map(unquote, arg_list)
+            tuple_list = map(lambda x: x.split('=', 1), arg_list)
+            return tuple_list
         else:
             return []
 
@@ -135,10 +138,20 @@ class Xor(object):
     def __get_post_args(req):
         if req.method == 'POST':
             content = req.environ['wsgi.input']
-            post_data = unquote(content.read(req.content_length))
-            return post_data.split('&')
+            post_data = content.read(req.content_length)
+            arg_list = post_data.split('&')
+            arg_list = map(unquote, arg_list)
+            tuple_list = map(lambda x: x.split('=', 1), arg_list)
+            return tuple_list
         else:
             return []
+
+    @staticmethod
+    def __arg_to_string(arg):
+        if len(arg) == 2:
+            return u'%s=%s' % tuple(arg)
+        else:
+            return arg[0]
 
     @staticmethod
     def __order_args(order, args):
