@@ -15,6 +15,7 @@ DEBUG = True
 
 
 class XorRequestHandler(WSGIRequestHandler):
+    # pylint: disable=R0904
     def connection_dropped(self, error, environ=None):
         if flask.g.proc:
             process = flask.g.proc
@@ -63,17 +64,34 @@ class Xor(object):
     # Function factory, because of late binding.
     @staticmethod
     def __create_view(route, output=False, order=None, user=None,
-                      script=None, command=None, **options):
+                      script=None, command=None, require_in_redir=False,
+                      in_redir=False, out_redir=False, **options):
         if not order:
             order = ['query', 'path', 'post']
+        if require_in_redir:
+            in_redir = True
 
         def view(**kwargs):
             query_args = Xor.__get_query_args(flask.request)
             post_args = Xor.__get_post_args(flask.request)
+            stdin_file = None
+            stdout_file = None
+            if in_redir:
+                stdin_file = (post_args.poplist('<') +
+                              query_args.poplist('<') +
+                              [None])[0]
+                if require_in_redir and not stdin_file:
+                    raise Exception
+            if out_redir:
+                stdout_file = (post_args.poplist('>') +
+                               query_args.poplist('>') +
+                               [None])[0]
             args = {}
             args['path'] = Xor.__get_path_args(kwargs, route)
-            args['query'] = map(Xor.__arg_to_string, query_args.items(multi=True))
-            args['post'] = map(Xor.__arg_to_string, post_args.items(multi=True))
+            args['query'] = map(Xor.__arg_to_string,
+                                query_args.items(multi=True))
+            args['post'] = map(Xor.__arg_to_string,
+                               post_args.items(multi=True))
             arg_list = Xor.__order_args(order, args)
             if script:
                 this_cmd = [script] + arg_list
@@ -84,11 +102,22 @@ class Xor(object):
                 print flask.request.method, flask.request.url
                 print this_cmd
             return Xor.__run_cmd(this_cmd, user=user, output=output,
-                                 script=script)
+                                 script=script, stdin_file=stdin_file,
+                                 stdout_file=stdout_file)
         return view
 
     @staticmethod
-    def __run_cmd(cmd, user=None, output=False, script=False):
+    def __run_cmd(cmd, user=None, output=False, script=False, stdin_file=None,
+                  stdout_file=None):
+        stdout = subprocess.PIPE
+        stdin = None
+        if stdout_file:
+            output = False  # TODO tee?
+            if True:  # XXX test if looks like filename
+                stdout = open(stdout_file, 'w')
+        if stdin_file:
+            if True:  # XXX test if looks like filename
+                stdin = open(stdin_file)
         if user:
             running_user = subprocess.check_output(['whoami']).strip()
             if user != running_user:
@@ -96,25 +125,23 @@ class Xor(object):
                     cmd = ['sudo', '-u', user] + cmd
                 else:
                     raise Exception('Permission denied')
-        if output:
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+        try:
+            process = subprocess.Popen(cmd, stdout=stdout, stdin=stdin,
                                        stderr=subprocess.STDOUT,
                                        bufsize=2, preexec_fn=os.setsid,
                                        shell=(not script))
             flask.g.proc = process
-            stream = read_generator(process.stdout, 1)
-            return flask.Response(flask.stream_with_context(stream))
-        else:
-            try:
-                process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                           stderr=subprocess.STDOUT,
-                                           preexec_fn=os.setsid,
-                                           shell=(not script))
+            if output:
+                stream = read_generator(process.stdout, 1)
+                return flask.Response(flask.stream_with_context(stream))
+            else:
                 process.communicate()
                 exit_value = process.returncode
-            except OSError as error:
-                exit_value = error.errno
-            return flask.make_response(str(exit_value))
+        except OSError as error:
+            exit_value = error.errno
+            if output:
+                raise error
+        return flask.make_response(str(exit_value))
 
     @staticmethod
     def __get_path_args(kwargs, route):
