@@ -6,6 +6,6 @@ install:
   - "pip install -r dev-requirements.txt --use-mirrors"
   - "pip install coveralls"
 script:
-    "coverage run --source=xor setup.py test"
+    "coverage run --source=xor setup.py nosetests"
 after_success:
     coveralls
