@@ -31,6 +31,7 @@
  "command": "tr"},
 {"route": "/cat",
  "output": true,
+ "in_redir": true,
  "command": "cat"},
 {"route": "/cmd2/<val>",
  "output": true,

@@ -4,7 +4,10 @@ import json
 import os
 import signal
 import subprocess
-from urllib2 import unquote
+import time
+from urllib2 import quote, unquote, urlopen
+from urllib import urlencode, unquote_plus
+import urlparse
 
 import flask
 from werkzeug.serving import WSGIRequestHandler
@@ -29,11 +32,17 @@ def main(argv):
     xor = Xor()
     xor.add_rules(config_rules)
     xor.app.run(host='0.0.0.0', debug=DEBUG, extra_files=[argv[1]],
-                request_handler=XorRequestHandler)
+                threaded=True, request_handler=XorRequestHandler)
 
 
 def read_generator(file_d, size):
-    return iter(lambda: file_d.read(size), '')
+    # Rediculous hack, wait for connection
+    time.sleep(0.1)
+    while True:
+        data = file_d.read(size)
+        if not data:
+            break
+        yield data
 
 
 def escape_arg(arg):
@@ -74,6 +83,9 @@ class Xor(object):
         def view(**kwargs):
             query_args = Xor.__get_query_args(flask.request)
             post_args = Xor.__get_post_args(flask.request)
+            if DEBUG:
+                print flask.request.method, flask.request.url
+                print 'Query args:\t', query_args
             stdin_file = None
             stdout_file = None
             if in_redir:
@@ -88,6 +100,9 @@ class Xor(object):
                                [None])[0]
             args = {}
             args['path'] = Xor.__get_path_args(kwargs, route)
+            if DEBUG:
+                print 'Path args:\t', args['path']
+
             args['query'] = map(Xor.__arg_to_string,
                                 query_args.items(multi=True))
             args['post'] = map(Xor.__arg_to_string,
@@ -99,8 +114,7 @@ class Xor(object):
                 arg_list = map(escape_arg, arg_list)
                 this_cmd = [' '.join([command] + arg_list)]
             if DEBUG:
-                print flask.request.method, flask.request.url
-                print this_cmd
+                print 'Command parsed:', this_cmd
             return Xor.__run_cmd(this_cmd, user=user, output=output,
                                  script=script, stdin_file=stdin_file,
                                  stdout_file=stdout_file)
@@ -112,11 +126,22 @@ class Xor(object):
         stdout = subprocess.PIPE
         stdin = None
         if stdout_file:
-            output = False  # TODO tee?
-            if True:  # XXX test if looks like filename
-                stdout = open(stdout_file, 'w')
+            output = False
+            stdout = open(stdout_file, 'w')
         if stdin_file:
-            if True:  # XXX test if looks like filename
+            if stdin_file.startswith('http'):
+                def unquote_host_part(url):
+                    url = unquote_plus(url)
+                    li = list(urlparse.urlsplit(url))
+                    li[2] = quote(li[2])  # quote path
+                    qsl = urlparse.parse_qsl(li[3], True)
+                    li[3] = urlencode(qsl)  # quote query
+                    return urlparse.urlunsplit(li)
+                stdin_url = unquote_host_part(stdin_file)
+                if DEBUG:
+                    print 'Opening url:', stdin_url
+                stdin = urlopen(stdin_url)
+            else:
                 stdin = open(stdin_file)
         if user:
             running_user = subprocess.check_output(['whoami']).strip()
@@ -129,7 +154,7 @@ class Xor(object):
             process = subprocess.Popen(cmd, stdout=stdout, stdin=stdin,
                                        stderr=subprocess.STDOUT,
                                        bufsize=2, preexec_fn=os.setsid,
-                                       shell=(not script))
+                                       close_fds=True, shell=(not script))
             flask.g.proc = process
             if output:
                 stream = read_generator(process.stdout, 1)
