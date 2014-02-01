@@ -8,6 +8,7 @@ import time
 from urllib2 import quote, unquote, urlopen
 from urllib import urlencode, unquote_plus
 import urlparse
+import tempfile
 
 import flask
 from werkzeug.serving import WSGIRequestHandler
@@ -36,8 +37,6 @@ def main(argv):
 
 
 def read_generator(file_d, size):
-    # Rediculous hack, wait for connection
-    time.sleep(0.1)
     while True:
         data = file_d.read(size)
         if not data:
@@ -140,7 +139,11 @@ class Xor(object):
                 stdin_url = unquote_host_part(stdin_file)
                 if DEBUG:
                     print 'Opening url:', stdin_url
-                stdin = urlopen(stdin_url)
+                url_file = urlopen(stdin_url)
+                stdin = tempfile.TemporaryFile()
+                stdin.write(url_file.read())
+                stdin.flush()
+                stdin.seek(0)
             else:
                 stdin = open(stdin_file)
         if user:
