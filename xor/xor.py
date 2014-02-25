@@ -60,22 +60,27 @@ class Xor(object):
             rule = r.copy()
             if 'route' not in rule:
                 continue
+            if 'arg_order' not in rule:
+                arg_order = ['query', 'path', 'post']
+            else:
+                arg_order = rule.pop('arg_order')
             if 'script' in rule or 'command' in rule:
                 route = rule.pop('route')
                 endpoint = 'f%s' % str(hash(route))
                 methods = rule.pop('methods', None)
                 defaults = rule.pop('defaults', None)
                 self.app.add_url_rule(route, endpoint,
-                                      Xor.__create_view(route, **rule),
+                                      Xor.__create_view(route, arg_order=arg_order,
+                                                        **rule),
                                       methods=methods, defaults=defaults)
 
     # Function factory, because of late binding.
     @staticmethod
-    def __create_view(route, output=False, order=None, user=None,
+    def __create_view(route, output=False, arg_order=None, user=None,
                       script=None, command=None, require_in_redir=False,
                       in_redir=False, out_redir=False, **options):
-        if not order:
-            order = ['query', 'path', 'post']
+        if not arg_order:
+            arg_order = []
         if require_in_redir:
             in_redir = True
 
@@ -106,7 +111,7 @@ class Xor(object):
                                 query_args.items(multi=True))
             args['post'] = map(Xor.__arg_to_string,
                                post_args.items(multi=True))
-            arg_list = Xor.__order_args(order, args)
+            arg_list = Xor.__order_args(arg_order, args)
             if script:
                 this_cmd = [script] + arg_list
             else:
@@ -218,9 +223,9 @@ class Xor(object):
     @staticmethod
     def __order_args(order, args):
         arg_list = []
-        for arg_group in order + ['query', 'path', 'post']:
-            if arg_group in args:
-                arg_list.extend(args[arg_group])
+        for arg_group in order:
+            if arg_group in ['query', 'path', 'post']:
+                arg_list.extend(args.get(arg_group,[]))
                 del args[arg_group]
         return arg_list
 

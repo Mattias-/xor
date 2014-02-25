@@ -153,7 +153,7 @@ class VarsTest(unittest.TestCase):
     def test_given_order(self):
         rule = simple_rule.copy()
         order = ['post', 'query', 'path']
-        rule.update({'order': order})
+        rule.update({'arg_order': order})
         self.x.add_rules([rule])
         client = self.x.app.test_client()
         path_args = ['abc', '123', 'def', '456']
@@ -163,5 +163,36 @@ class VarsTest(unittest.TestCase):
         query_string = '&'.join(query_args)
         data_string = '&'.join(post_args)
         result_string = ' '.join(post_args + query_args + path_args)
+        rv = client.post('/t1/%s?%s' % (path, query_string), data=data_string)
+        self.assertEqual(result_string, rv.data.strip())
+
+    def test_given_order2(self):
+        rule = simple_rule.copy()
+        order = ['post']
+        rule.update({'arg_order': order})
+        self.x.add_rules([rule])
+        client = self.x.app.test_client()
+        path_args = ['abc', '123', 'def', '456']
+        query_args = ['a=789', 'ghi']
+        post_args = ['876','c=jkl','b=543']
+        path = '/'.join(path_args)
+        query_string = '&'.join(query_args)
+        data_string = '&'.join(post_args)
+        result_string = ' '.join(post_args)
+        rv = client.post('/t1/%s?%s' % (path, query_string), data=data_string)
+        self.assertEqual(result_string, rv.data.strip())
+
+    def test_disabled_args(self):
+        rule = simple_rule.copy()
+        rule.update({'arg_order': None})
+        self.x.add_rules([rule])
+        client = self.x.app.test_client()
+        path_args = ['abc', '123', 'def', '456']
+        query_args = ['a=789', 'ghi']
+        post_args = ['876','c=jkl','b=543']
+        path = '/'.join(path_args)
+        query_string = '&'.join(query_args)
+        data_string = '&'.join(post_args)
+        result_string = ''
         rv = client.post('/t1/%s?%s' % (path, query_string), data=data_string)
         self.assertEqual(result_string, rv.data.strip())
