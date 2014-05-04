@@ -10,6 +10,7 @@ from urllib import urlencode, unquote_plus
 import urlparse
 import tempfile
 
+import requests
 import flask
 from werkzeug.serving import WSGIRequestHandler
 from werkzeug.datastructures import OrderedMultiDict
@@ -41,6 +42,7 @@ def read_generator(file_d, size):
         data = file_d.read(size)
         if not data:
             break
+        print 'yielding data', data
         yield data
 
 
@@ -127,6 +129,14 @@ class Xor(object):
     @staticmethod
     def __run_cmd(cmd, user=None, output=False, script=False, stdin_file=None,
                   stdout_file=None):
+        def stream_url(url, outstream):
+            r = requests.get(url, stream=True)
+            for c in r.iter_content():
+                print "wrote ", c
+                outstream.write(c)
+            outstream.close()
+            print "done with writing"
+
         stdout = subprocess.PIPE
         stdin = None
         if stdout_file:
@@ -134,21 +144,7 @@ class Xor(object):
             stdout = open(stdout_file, 'w')
         if stdin_file:
             if stdin_file.startswith('http'):
-                def unquote_host_part(url):
-                    url = unquote_plus(url)
-                    li = list(urlparse.urlsplit(url))
-                    li[2] = quote(li[2])  # quote path
-                    qsl = urlparse.parse_qsl(li[3], True)
-                    li[3] = urlencode(qsl)  # quote query
-                    return urlparse.urlunsplit(li)
-                stdin_url = unquote_host_part(stdin_file)
-                if DEBUG:
-                    print 'Opening url:', stdin_url
-                url_file = urlopen(stdin_url)
-                stdin = tempfile.TemporaryFile()
-                stdin.write(url_file.read())
-                stdin.flush()
-                stdin.seek(0)
+                stdin = subprocess.PIPE
             else:
                 stdin = open(stdin_file)
         if user:
@@ -161,8 +157,21 @@ class Xor(object):
         try:
             process = subprocess.Popen(cmd, stdout=stdout, stdin=stdin,
                                        stderr=subprocess.STDOUT,
-                                       bufsize=2, preexec_fn=os.setsid,
+                                       bufsize=0, preexec_fn=os.setsid,
                                        close_fds=True, shell=(not script))
+            if stdin_file and stdin_file.startswith('http'):
+                def unquote_host_part(url):
+                    url = unquote_plus(url)
+                    li = list(urlparse.urlsplit(url))
+                    li[2] = quote(li[2])  # quote path
+                    qsl = urlparse.parse_qsl(li[3], True)
+                    li[3] = urlencode(qsl)  # quote query
+                    return urlparse.urlunsplit(li)
+                stdin_url = unquote_host_part(stdin_file)
+                if DEBUG:
+                    print 'Opening url:', stdin_url
+                stream_url(stdin_url, process.stdin)
+
             flask.g.proc = process
             if output:
                 stream = read_generator(process.stdout, 1)
